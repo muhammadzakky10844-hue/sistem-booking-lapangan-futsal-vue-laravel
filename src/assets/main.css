@@ -1,0 +1,8 @@
+/* Custom global styles */
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+a {
+  text-decoration: none;
+}
