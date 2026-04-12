@@ -1,5 +1,17 @@
 <?php
 
+$frontendUrl = trim((string) env('FRONTEND_URL', ''));
+$extraOrigins = array_filter(array_map(
+    static fn ($value) => trim((string) $value),
+    explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))
+));
+
+$allowedOrigins = array_values(array_unique(array_filter([
+    'http://localhost:5173',
+    $frontendUrl !== '' ? rtrim($frontendUrl, '/') : null,
+    ...$extraOrigins,
+])));
+
 return [
 
     /*
@@ -15,11 +27,11 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout'],
+    'paths' => ['api/*', 'index.php/api/*', 'sanctum/csrf-cookie', 'login', 'logout'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:5173'],
+    'allowed_origins' => $allowedOrigins,
 
     'allowed_origins_patterns' => [],
 

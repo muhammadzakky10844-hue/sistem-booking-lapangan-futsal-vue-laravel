@@ -21,7 +21,7 @@ class JwtMiddleware
             }
 
             auth()->shouldUse('admin');
-            $admin = auth('admin')->setToken($token)->user();
+            $admin = JWTAuth::setToken($token)->authenticate();
             if (!$admin || !($admin instanceof Admin)) {
                 return response()->json(['message' => 'Unauthorized. Silakan login terlebih dahulu.'], 401);
             }

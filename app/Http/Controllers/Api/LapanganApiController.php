@@ -2,24 +2,56 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Lapangan;
-use App\Models\Booking;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\{Log, Schema};
+use App\Http\Controllers\Controller;
+use App\Models\{Booking, Lapangan};
+use Throwable;
 
 class LapanganApiController extends Controller
 {
     // Public: list lapangan tersedia (untuk halaman home penyewa)
     public function index()
     {
-        $lapangans = Lapangan::where('status', 'tersedia')->get();
+        try {
+            $lapangans = Lapangan::where('status', 'tersedia')
+                ->orderBy('nomor_lapangan')
+                ->get();
+        } catch (Throwable $e) {
+            Log::error('Gagal mengambil data lapangan.', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([]);
+        }
+
         $today = now()->toDateString();
 
-        $lapangans->each(function ($lap) use ($today) {
-            $bookings = Booking::where('lapangan_id', $lap->lapangan_id)
-                ->where('tanggal_booking', $today)
-                ->whereIn('status', ['menunggu', 'terkonfirmasi'])
-                ->get(['jam_mulai', 'jam_selesai']);
+        $canReadBookings = false;
+        try {
+            $canReadBookings = Schema::hasTable('bookings');
+        } catch (Throwable $e) {
+            Log::warning('Tidak bisa cek tabel bookings.', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        $lapangans->each(function ($lap) use ($today, $canReadBookings) {
+            $bookings = collect();
+
+            if ($canReadBookings) {
+                try {
+                    $bookings = Booking::where('lapangan_id', $lap->lapangan_id)
+                        ->where('tanggal_booking', $today)
+                        ->whereIn('status', ['menunggu', 'terkonfirmasi'])
+                        ->get(['jam_mulai', 'jam_selesai']);
+                } catch (Throwable $e) {
+                    Log::warning('Gagal membaca booking untuk lapangan.', [
+                        'lapangan_id' => $lap->lapangan_id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             // Tandai tiap slot per jam (07:00-22:00) apakah terbooked atau tidak
             $slots = [];

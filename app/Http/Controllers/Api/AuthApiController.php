@@ -46,7 +46,7 @@ class AuthApiController extends Controller
             }
 
             auth()->shouldUse('admin');
-            auth('admin')->setToken($token)->logout();
+            JWTAuth::setToken($token)->invalidate();
             return response()->json(['message' => 'Logout berhasil.']);
         } catch (JWTException $e) {
             return response()->json(['message' => 'Token tidak valid atau sudah logout.'], 401);
@@ -62,7 +62,7 @@ class AuthApiController extends Controller
             }
 
             auth()->shouldUse('admin');
-            $admin = auth('admin')->setToken($token)->user();
+            $admin = JWTAuth::setToken($token)->authenticate();
             if (!$admin) {
                 return response()->json(['authenticated' => false], 401);
             }
