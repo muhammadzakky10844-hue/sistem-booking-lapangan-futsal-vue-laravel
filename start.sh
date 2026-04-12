@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+# Start Laravel backend
 cd backend
 
 php artisan config:clear || true
