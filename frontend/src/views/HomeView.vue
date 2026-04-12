@@ -6,12 +6,53 @@ import api from '@/utils/api'
 const router    = useRouter()
 const lapangans = ref([])
 const loading   = ref(true)
+const error     = ref('')
 const apiBase   = (import.meta.env.VITE_API_URL || `${window.location.origin}/api`).replace(/\/+$/, '')
 
+function extractLapanganList(payload) {
+  if (typeof payload === 'string') {
+    try {
+      const parsed = JSON.parse(payload)
+      if (Array.isArray(parsed)) return parsed
+      if (Array.isArray(parsed?.data)) return parsed.data
+    } catch {
+      // Ignore parse error and continue with existing checks.
+    }
+  }
+
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  return null
+}
+
 onMounted(async () => {
+  error.value = ''
   try {
     const res = await api.get('/lapangan')
-    lapangans.value = res.data
+    const list = extractLapanganList(res.data)
+    if (!list) {
+      throw new Error('Format data lapangan tidak valid.')
+    }
+    lapangans.value = list
+  } catch (err) {
+    lapangans.value = []
+    const msg = String(err?.message || '').toLowerCase()
+    const status = err?.response?.status
+    const isFormatOrChallengeIssue =
+      msg.includes('html') ||
+      msg.includes('format') ||
+      msg.includes('challenge') ||
+      msg.includes('bukan list data')
+
+    if (status === 500) {
+      error.value = 'Endpoint API ditemukan, tapi backend mengembalikan error 500. Cek konfigurasi database/migrasi di hosting lalu deploy backend ulang.'
+    } else if (status === 404) {
+      error.value = 'Endpoint API lapangan tidak ditemukan di hosting. Cek path backend/public dan rewrite route /api.'
+    } else {
+      error.value = isFormatOrChallengeIssue
+        ? 'API lapangan di hosting terhalang challenge/proteksi dan tidak mengembalikan JSON valid.'
+        : 'Gagal memuat data lapangan. Periksa koneksi API backend.'
+    }
   } finally {
     loading.value = false
   }
@@ -46,6 +87,9 @@ function formatRupiah(n) {
 
     <!-- Content -->
     <div class="container my-4">
+      <div v-if="error" class="alert alert-danger border-0 mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+      </div>
 
       <!-- Hero Banner -->
       <div class="rounded-3 mb-4 px-4 py-5 text-white text-center"

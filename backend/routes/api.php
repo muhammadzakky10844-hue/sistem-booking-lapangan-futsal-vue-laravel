@@ -24,6 +24,9 @@ Route::post('/booking',            [BookingApiController::class, 'store']);
 Route::get('/booking/jadwal',      [BookingApiController::class, 'jadwal']);
 Route::get('/booking/{id}/detail', [BookingApiController::class, 'detail']);
 Route::post('/pembayaran/upload',  [PembayaranApiController::class, 'upload']);
+Route::post('/pembayaran/midtrans/token', [PembayaranApiController::class, 'createMidtransSnapToken']);
+Route::post('/pembayaran/midtrans/notification', [PembayaranApiController::class, 'midtransNotification']);
+Route::post('/pembayaran/midtrans/sync', [PembayaranApiController::class, 'syncMidtransStatus']);
 Route::get('/media/lapangan/{filename}', [MediaApiController::class, 'lapangan'])->where('filename', '.*');
 Route::get('/media/bukti/{filename}',    [MediaApiController::class, 'bukti'])->where('filename', '.*');
 Route::get('/media/image/{filename}',    [MediaApiController::class, 'image'])->where('filename', '.*');
@@ -52,6 +55,4 @@ Route::middleware('admin.jwt')->prefix('admin')->group(function () {
 
     // Pembayaran
     Route::get('/pembayaran',         [PembayaranApiController::class, 'index']);
-    Route::post('/pembayaran/terima', [PembayaranApiController::class, 'terima']);
-    Route::post('/pembayaran/tolak',  [PembayaranApiController::class, 'tolak']);
 });

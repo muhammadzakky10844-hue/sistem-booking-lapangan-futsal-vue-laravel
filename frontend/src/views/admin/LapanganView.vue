@@ -8,6 +8,7 @@ const showModal  = ref(false)
 const saving     = ref(false)
 const editMode   = ref(false)
 const error      = ref('')
+const listError  = ref('')
 const success    = ref('')
 const filterStatus = ref('')
 const filterSearch = ref('')
@@ -24,11 +25,17 @@ const form = ref({
 
 async function load() {
   loading.value = true
+  listError.value = ''
   try {
     const res = await api.get('/admin/lapangan', {
       params: { status: filterStatus.value, search: filterSearch.value }
     })
     lapangans.value = res.data
+  } catch (err) {
+    lapangans.value = []
+    listError.value = err.response?.status === 401
+      ? 'Sesi admin habis. Silakan login ulang.'
+      : 'Gagal memuat data lapangan dari API.'
   } finally {
     loading.value = false
   }
@@ -109,12 +116,12 @@ function formatRupiah(n) { return new Intl.NumberFormat('id-ID').format(n) }
 
 <template>
   <div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
       <div>
         <h5 class="fw-bold mb-0">Daftar Lapangan</h5>
         <small class="text-muted">Kelola data lapangan futsal</small>
       </div>
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="badge bg-secondary fs-6">{{ lapangans.length }} data</span>
         <button @click="openAdd" class="btn btn-primary btn-sm">
           <i class="bi bi-plus-circle"></i> Tambah Lapangan
@@ -123,6 +130,7 @@ function formatRupiah(n) { return new Intl.NumberFormat('id-ID').format(n) }
     </div>
 
     <div v-if="success" class="alert alert-success border-0">{{ success }}</div>
+    <div v-if="listError" class="alert alert-danger border-0">{{ listError }}</div>
 
     <!-- Filter -->
     <div class="card border-0 shadow-sm rounded-3 p-3 mb-3">
@@ -139,11 +147,11 @@ function formatRupiah(n) { return new Intl.NumberFormat('id-ID').format(n) }
             <option value="perbaikan">Perbaikan</option>
           </select>
         </div>
-        <div class="col-md-2 d-flex gap-1">
-          <button @click="load" type="button" class="btn btn-primary btn-sm w-100">
+        <div class="col-md-2 d-flex gap-1 flex-wrap">
+          <button @click="load" type="button" class="btn btn-primary btn-sm flex-fill">
             <i class="bi bi-funnel"></i> Filter
           </button>
-          <button @click="filterSearch='';filterStatus='';load()" type="button" class="btn btn-outline-secondary btn-sm w-100">
+          <button @click="filterSearch='';filterStatus='';load()" type="button" class="btn btn-outline-secondary btn-sm flex-fill">
             <i class="bi bi-arrow-counterclockwise"></i>
           </button>
         </div>
@@ -156,6 +164,7 @@ function formatRupiah(n) { return new Intl.NumberFormat('id-ID').format(n) }
 
     <div v-else class="card border-0 shadow-sm rounded-3">
       <div class="card-body p-0">
+        <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
@@ -204,6 +213,7 @@ function formatRupiah(n) { return new Intl.NumberFormat('id-ID').format(n) }
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 

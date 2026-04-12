@@ -1,19 +1,193 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import api from '@/utils/api'
 import { useAuthStore } from '@/stores/auth'
+import Chart from 'chart.js/auto'
 
 const stats   = ref(null)
 const loading = ref(true)
+const chartLoading = ref(false)
 const auth    = useAuthStore()
+const periodePendapatan = ref('7')
+const pendapatanChartRef = ref(null)
+const bookingChartRef = ref(null)
+const pembayaranChartRef = ref(null)
+
+let pendapatanChart = null
+let bookingChart = null
+let pembayaranChart = null
+
+function destroyCharts() {
+  if (pendapatanChart) {
+    pendapatanChart.destroy()
+    pendapatanChart = null
+  }
+  if (bookingChart) {
+    bookingChart.destroy()
+    bookingChart = null
+  }
+  if (pembayaranChart) {
+    pembayaranChart.destroy()
+    pembayaranChart = null
+  }
+}
+
+function renderCharts() {
+  destroyCharts()
+
+  if (!stats.value) return
+  if (!pendapatanChartRef.value || !bookingChartRef.value || !pembayaranChartRef.value) return
+
+  const chartPayload = stats.value.charts || {}
+
+  const pendapatanSource = chartPayload.pendapatan_harian || chartPayload.pendapatan_harian_7_hari || {}
+  const pendapatanLabels = pendapatanSource.labels || []
+  const pendapatanValues = pendapatanSource.values || []
+
+  const bookingLabels = chartPayload.status_booking?.labels || ['Menunggu', 'Terkonfirmasi', 'Selesai', 'Batal']
+  const bookingValues = chartPayload.status_booking?.values || [
+    stats.value.booking?.menunggu || 0,
+    stats.value.booking?.terkonfirmasi || 0,
+    stats.value.booking?.selesai || 0,
+    stats.value.booking?.batal || 0,
+  ]
+
+  const pembayaranLabels = chartPayload.status_pembayaran?.labels || ['Pending', 'Berhasil', 'Gagal']
+  const pembayaranValues = chartPayload.status_pembayaran?.values || [
+    stats.value.pembayaran?.menunggu || 0,
+    stats.value.pembayaran?.diterima || 0,
+    stats.value.pembayaran?.ditolak || 0,
+  ]
+
+  pendapatanChart = new Chart(pendapatanChartRef.value, {
+    type: 'line',
+    data: {
+      labels: pendapatanLabels,
+      datasets: [
+        {
+          label: `Pendapatan Harian (${periodePendapatan.value} hari)`,
+          data: pendapatanValues,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.15)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `Rp ${formatRupiah(ctx.parsed.y || 0)}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => `Rp ${formatRupiah(value)}`,
+          },
+        },
+      },
+    },
+  })
+
+  bookingChart = new Chart(bookingChartRef.value, {
+    type: 'doughnut',
+    data: {
+      labels: bookingLabels,
+      datasets: [
+        {
+          data: bookingValues,
+          backgroundColor: ['#f59e0b', '#0ea5e9', '#22c55e', '#ef4444'],
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+        },
+      },
+    },
+  })
+
+  pembayaranChart = new Chart(pembayaranChartRef.value, {
+    type: 'doughnut',
+    data: {
+      labels: pembayaranLabels,
+      datasets: [
+        {
+          data: pembayaranValues,
+          backgroundColor: ['#f59e0b', '#16a34a', '#ef4444'],
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+        },
+      },
+    },
+  })
+}
+
+async function loadDashboard(isInitial = false) {
+  if (isInitial) {
+    loading.value = true
+  } else {
+    chartLoading.value = true
+  }
+
+  try {
+    const res = await api.get('/admin/dashboard', {
+      params: {
+        periode: String(periodePendapatan.value),
+      },
+    })
+    stats.value = res.data
+
+    const apiPeriode = res.data?.charts?.pendapatan_harian?.periode_hari
+    if (apiPeriode) {
+      periodePendapatan.value = String(apiPeriode)
+    }
+  } finally {
+    if (isInitial) {
+      loading.value = false
+    } else {
+      chartLoading.value = false
+    }
+  }
+
+  await nextTick()
+  renderCharts()
+}
+
+async function gantiPeriodePendapatan() {
+  await loadDashboard(false)
+}
 
 onMounted(async () => {
-  try {
-    const res = await api.get('/admin/dashboard')
-    stats.value = res.data
-  } finally {
-    loading.value = false
-  }
+  await loadDashboard(true)
+})
+
+onBeforeUnmount(() => {
+  destroyCharts()
 })
 
 function formatRupiah(n) { return new Intl.NumberFormat('id-ID').format(n) }
@@ -35,7 +209,7 @@ const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-
     <template v-else-if="stats">
       <!-- Welcome Banner -->
       <div class="rounded-3 mb-4 px-4 py-4 text-white" style="background:linear-gradient(135deg,#1a1a2e,#0d6efd);">
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
           <div style="font-size:2.5rem;"><i class="bi bi-speedometer2"></i></div>
           <div>
             <h5 class="mb-0 fw-bold">Selamat Datang, {{ auth.admin?.nama }}!</h5>
@@ -95,7 +269,7 @@ const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-
                 <div class="text-muted small">Pembayaran Masuk</div>
                 <div class="fw-bold fs-3 lh-1">{{ stats.pembayaran.total }}</div>
                 <div style="font-size:.75rem;" class="text-danger">
-                  <i class="bi bi-exclamation-circle"></i> {{ stats.pembayaran.menunggu }} perlu diverifikasi
+                  <i class="bi bi-hourglass-split"></i> {{ stats.pembayaran.menunggu }} transaksi masih pending
                 </div>
               </div>
             </div>
@@ -117,6 +291,61 @@ const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-
                 <div style="font-size:.75rem;" class="text-muted">
                   dari {{ stats.booking.selesai }} booking selesai
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="row g-3 mb-4">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Tren Pendapatan Harian</h6>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="small text-muted mb-0">Periode</label>
+                  <select
+                    v-model="periodePendapatan"
+                    @change="gantiPeriodePendapatan"
+                    :disabled="chartLoading"
+                    class="form-select form-select-sm"
+                    style="width:auto;min-width:120px;">
+                    <option value="7">7 Hari</option>
+                    <option value="14">14 Hari</option>
+                    <option value="30">30 Hari</option>
+                  </select>
+                </div>
+              </div>
+              <div v-if="chartLoading" class="text-center py-5">
+                <div class="spinner-border spinner-border-sm text-primary"></div>
+                <div class="small text-muted mt-2">Memuat data chart...</div>
+              </div>
+              <div v-else style="height:280px;">
+                <canvas ref="pendapatanChartRef"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-info me-2"></i>Distribusi Status Booking</h6>
+              <div style="height:280px;">
+                <canvas ref="bookingChartRef"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-success me-2"></i>Distribusi Status Pembayaran</h6>
+              <div style="height:280px;">
+                <canvas ref="pembayaranChartRef"></canvas>
               </div>
             </div>
           </div>
@@ -183,11 +412,11 @@ const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-
                   </div>
                 </div>
               </div>
-              <div class="mt-3 d-flex gap-2">
+              <div class="mt-3 d-flex gap-2 flex-wrap">
                 <RouterLink v-if="stats.pembayaran.menunggu > 0" to="/admin/pembayaran" class="btn btn-sm btn-warning">
-                  <i class="bi bi-bell-fill me-1"></i>{{ stats.pembayaran.menunggu }} pembayaran perlu diverifikasi
+                  <i class="bi bi-clock-history me-1"></i>{{ stats.pembayaran.menunggu }} transaksi pending
                 </RouterLink>
-                <span v-else class="text-muted small"><i class="bi bi-check-circle-fill text-success me-1"></i>Semua pembayaran sudah diverifikasi</span>
+                <span v-else class="text-muted small"><i class="bi bi-check-circle-fill text-success me-1"></i>Semua pembayaran berstatus final</span>
               </div>
             </div>
           </div>
@@ -197,7 +426,7 @@ const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-
       <!-- Booking Terbaru -->
       <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-          <div class="px-4 py-3 fw-bold border-bottom d-flex justify-content-between align-items-center"
+          <div class="px-4 py-3 fw-bold border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2"
                style="background:#f8f9fa;border-radius:14px 14px 0 0;">
             <span><i class="bi bi-clock-history text-primary me-2"></i>Booking Terbaru</span>
             <RouterLink to="/admin/booking" class="btn btn-sm btn-outline-primary">Lihat Semua</RouterLink>

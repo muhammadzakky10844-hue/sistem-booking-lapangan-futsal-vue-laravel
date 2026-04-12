@@ -378,7 +378,7 @@ async function submit() {
               <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Informasi</h6>
               <ul class="list-unstyled mb-0 small text-muted">
                 <li class="mb-2"><i class="bi bi-dot text-warning fs-5 me-1"></i>Booking berlaku setelah pembayaran dikonfirmasi</li>
-                <li class="mb-2"><i class="bi bi-dot text-warning fs-5 me-1"></i>Upload bukti bayar setelah booking berhasil</li>
+                <li class="mb-2"><i class="bi bi-dot text-warning fs-5 me-1"></i>Lanjutkan pembayaran online via Midtrans setelah booking berhasil</li>
                 <li><i class="bi bi-dot text-warning fs-5 me-1"></i>Hubungi admin jika ada kendala</li>
               </ul>
             </div>
