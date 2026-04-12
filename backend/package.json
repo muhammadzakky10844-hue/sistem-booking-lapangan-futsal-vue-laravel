@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "node -e \"console.log('Skip Vite build in backend deploy')\"",
         "dev": "vite"
     },
     "devDependencies": {
