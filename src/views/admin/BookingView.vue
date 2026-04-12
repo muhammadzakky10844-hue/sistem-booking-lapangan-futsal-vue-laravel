@@ -52,7 +52,7 @@ function formatJam(t) { return t ? t.substring(0, 5) : '-' }
 
 <template>
   <div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
       <div>
         <h5 class="fw-bold mb-0">Daftar Booking</h5>
         <small class="text-muted">Kelola semua data pemesanan lapangan</small>
@@ -92,11 +92,11 @@ function formatJam(t) { return t ? t.substring(0, 5) : '-' }
           <label class="form-label small fw-semibold mb-1">Tanggal</label>
           <input v-model="filters.tanggal" @change="load" type="date" class="form-control form-control-sm">
         </div>
-        <div class="col-md-2 d-flex gap-1">
-          <button @click="load" type="button" class="btn btn-primary btn-sm w-100">
+        <div class="col-md-2 d-flex gap-1 flex-wrap">
+          <button @click="load" type="button" class="btn btn-primary btn-sm flex-fill">
             <i class="bi bi-funnel"></i> Filter
           </button>
-          <button @click="filters={status:'',lapangan_id:'',tanggal:'',search:''};load()" type="button" class="btn btn-outline-secondary btn-sm w-100">
+          <button @click="filters={status:'',lapangan_id:'',tanggal:'',search:''};load()" type="button" class="btn btn-outline-secondary btn-sm flex-fill">
             <i class="bi bi-arrow-counterclockwise"></i>
           </button>
         </div>
@@ -109,6 +109,7 @@ function formatJam(t) { return t ? t.substring(0, 5) : '-' }
 
     <div v-else class="card border-0 shadow-sm rounded-3">
       <div class="card-body p-0">
+        <div class="table-responsive">
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
@@ -165,6 +166,7 @@ function formatJam(t) { return t ? t.substring(0, 5) : '-' }
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
