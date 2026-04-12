@@ -1,0 +1,48 @@
+INFINITYFREE DEPLOY - COPY SNIPPETS
+
+1) ROOT htdocs/.htaccess (versi aman)
+-----------------------------------
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php
+</IfModule>
+
+
+2) ROOT htdocs/index.php (jika source Laravel di folder htdocs/backend_laravel)
+-------------------------------------------------------------------------------
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
+
+define('LARAVEL_START', microtime(true));
+
+// Determine if the application is in maintenance mode...
+if (file_exists($maintenance = __DIR__.'/backend_laravel/storage/framework/maintenance.php')) {
+    require $maintenance;
+}
+
+// Register the Composer autoloader...
+require __DIR__.'/backend_laravel/vendor/autoload.php';
+
+// Bootstrap Laravel and handle the request...
+/** @var Application $app */
+$app = require_once __DIR__.'/backend_laravel/bootstrap/app.php';
+
+$app->handleRequest(Request::capture());
+
+
+3) TEST FILE htdocs/cek.php
+---------------------------
+<?php
+echo "CEK_HTDOCS_OK";
+
+
+4) URL TESTS
+------------
+http://booking-futsal-jf.rf.gd/cek.php
+http://booking-futsal-jf.rf.gd/index.php/api/lapangan
+http://booking-futsal-jf.rf.gd/api/lapangan
