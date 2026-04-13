@@ -1,4 +1,26 @@
 {
+  "redirects": [
+    {
+      "source": "/login",
+      "destination": "/#/login",
+      "permanent": false
+    },
+    {
+      "source": "/booking",
+      "destination": "/#/booking",
+      "permanent": false
+    },
+    {
+      "source": "/pembayaran/:id",
+      "destination": "/#/pembayaran/:id",
+      "permanent": false
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/#/admin/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/:path*",
