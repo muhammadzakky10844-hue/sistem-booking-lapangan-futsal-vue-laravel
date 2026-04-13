@@ -100,6 +100,14 @@ async function bayarDenganMidtrans() {
     })
 
     const snapToken = res.data?.snap_token
+    const redirectUrl = res.data?.redirect_url
+
+    // Paling stabil: gunakan redirect URL dari backend agar environment Midtrans pasti sinkron.
+    if (redirectUrl) {
+      window.location.href = redirectUrl
+      return
+    }
+
     if (!snapToken || !window.snap) {
       throw new Error('Snap token Midtrans tidak tersedia.')
     }
