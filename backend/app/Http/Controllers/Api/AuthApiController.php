@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -13,28 +14,42 @@ class AuthApiController extends Controller
 {
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+        try {
+            $request->validate([
+                'email'    => 'required|email',
+                'password' => 'required|string',
+            ]);
 
-        $admin = Admin::where('email', $request->email)->first();
+            $admin = Admin::where('email', $request->email)->first();
 
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return response()->json(['message' => 'Email atau password salah.'], 401);
+            if (!$admin || !Hash::check($request->password, $admin->password)) {
+                return response()->json(['message' => 'Email atau password salah.'], 401);
+            }
+
+            if (!is_string(config('jwt.secret')) || trim((string) config('jwt.secret')) === '') {
+                return response()->json([
+                    'message' => 'Konfigurasi JWT_SECRET belum valid di server.',
+                ], 500);
+            }
+
+            $token = JWTAuth::fromUser($admin);
+
+            return response()->json([
+                'message' => 'Login berhasil.',
+                'token'   => $token,
+                'admin'   => [
+                    'id'    => $admin->id,
+                    'nama'  => $admin->nama,
+                    'email' => $admin->email,
+                ],
+            ]);
+        } catch (JWTException $e) {
+            Log::error('JWT login error', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Gagal membuat token login. Periksa konfigurasi JWT di server.'], 500);
+        } catch (\Throwable $e) {
+            Log::error('Auth login error', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Terjadi kesalahan server saat login.'], 500);
         }
-
-        $token = JWTAuth::fromUser($admin);
-
-        return response()->json([
-            'message' => 'Login berhasil.',
-            'token'   => $token,
-            'admin'   => [
-                'id'    => $admin->id,
-                'nama'  => $admin->nama,
-                'email' => $admin->email,
-            ],
-        ]);
     }
 
     public function logout(Request $request)
