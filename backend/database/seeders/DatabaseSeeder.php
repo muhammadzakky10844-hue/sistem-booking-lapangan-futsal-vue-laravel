@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Admin;
+use App\Models\Booking;
+use App\Models\Lapangan;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -24,10 +26,14 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Keep production seed idempotent and lightweight.
-        if (app()->environment(['local', 'testing'])) {
+        if (Lapangan::count() === 0) {
             $this->call([
                 LapanganSeeder::class,
+            ]);
+        }
+
+        if (Booking::count() === 0) {
+            $this->call([
                 BookingSeeder::class,
             ]);
         }
