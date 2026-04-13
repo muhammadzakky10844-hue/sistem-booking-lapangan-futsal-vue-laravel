@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -19,6 +21,15 @@ class AuthApiController extends Controller
                 'email'    => 'required|email',
                 'password' => 'required|string',
             ]);
+
+            // Self-healing for first deploys where startup migration did not run.
+            if (!Schema::hasTable('admins')) {
+                Artisan::call('migrate', ['--force' => true]);
+                Artisan::call('db:seed', [
+                    '--class' => 'Database\\Seeders\\DatabaseSeeder',
+                    '--force' => true,
+                ]);
+            }
 
             $admin = Admin::where('email', $request->email)->first();
 
