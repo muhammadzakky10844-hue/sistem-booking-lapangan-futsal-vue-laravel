@@ -16,15 +16,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Admin::create([
-            'nama'     => 'Admin',
-            'email'    => 'admin@gmail.com',
-            'password' => Hash::make('zakkyadmin123'),
-        ]);
+        Admin::updateOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'nama'     => 'Admin',
+                'password' => Hash::make('zakkyadmin123'),
+            ]
+        );
 
-        $this->call([
-            LapanganSeeder::class,
-            BookingSeeder::class,
-        ]);
+        // Keep production seed idempotent and lightweight.
+        if (app()->environment(['local', 'testing'])) {
+            $this->call([
+                LapanganSeeder::class,
+                BookingSeeder::class,
+            ]);
+        }
     }
 }
