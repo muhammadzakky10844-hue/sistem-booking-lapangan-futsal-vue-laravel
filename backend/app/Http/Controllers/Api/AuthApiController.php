@@ -31,7 +31,7 @@ class AuthApiController extends Controller
                     $table->string('email')->unique();
                     $table->string('password');
                     $table->timestamps();
-                ]);
+                });
 
                 DB::table('admins')->insert([
                     'nama' => 'Admin',
