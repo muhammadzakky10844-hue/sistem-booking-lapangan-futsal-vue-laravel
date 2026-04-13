@@ -384,17 +384,39 @@ class PembayaranApiController extends Controller
     private function isMidtransConfigured(): bool
     {
         $serverKey = trim((string) config('services.midtrans.server_key', ''));
+        $enabled = $this->configBool(config('services.midtrans.enabled', null), null);
 
-        return (bool) config('services.midtrans.enabled', false)
-            && !empty($serverKey);
+        if ($enabled === null) {
+            $enabled = !empty($serverKey);
+        }
+
+        return $enabled && !empty($serverKey);
     }
 
     private function configureMidtrans(): void
     {
         MidtransConfig::$serverKey = trim((string) config('services.midtrans.server_key', ''));
-        MidtransConfig::$isProduction = (bool) config('services.midtrans.is_production', false);
-        MidtransConfig::$isSanitized = (bool) config('services.midtrans.is_sanitized', true);
-        MidtransConfig::$is3ds = (bool) config('services.midtrans.is_3ds', true);
+        MidtransConfig::$isProduction = $this->configBool(config('services.midtrans.is_production', false), false);
+        MidtransConfig::$isSanitized = $this->configBool(config('services.midtrans.is_sanitized', true), true);
+        MidtransConfig::$is3ds = $this->configBool(config('services.midtrans.is_3ds', true), true);
+    }
+
+    private function configBool(mixed $value, ?bool $default): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (bool) $value;
+        }
+
+        if (is_string($value)) {
+            $parsed = filter_var(trim($value), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            return $parsed ?? $default;
+        }
+
+        return $default;
     }
 
     private function extractBookingIdFromOrderId(string $orderId): ?int
