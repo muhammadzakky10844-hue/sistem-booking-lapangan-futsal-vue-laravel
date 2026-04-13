@@ -485,6 +485,14 @@ class PembayaranApiController extends Controller
         );
 
         $pembayaran = Pembayaran::firstOrNew(['booking_id' => $booking->booking_id]);
+
+        // Do not downgrade a payment that is already verified as paid.
+        if ($pembayaran->status_verifikasi === 'diterima' && $mapped['status_verifikasi'] === 'menunggu') {
+            $mapped['status_verifikasi'] = 'diterima';
+            $mapped['booking_status'] = 'terkonfirmasi';
+            $mapped['is_paid'] = true;
+        }
+
         $pembayaran->fill([
             'metode_pembayaran' => $this->resolveMetodePembayaran($payload),
             'status_verifikasi' => $mapped['status_verifikasi'],
