@@ -22,6 +22,17 @@ const midtransSnapScriptSrc = midtransIsProduction
   ? 'https://app.midtrans.com/snap/snap.js'
   : 'https://app.sandbox.midtrans.com/snap/snap.js'
 
+function resolveSnapScriptSrc(redirectUrl) {
+  const url = String(redirectUrl || '').toLowerCase()
+  if (url.startsWith('https://app.sandbox.midtrans.com/')) {
+    return 'https://app.sandbox.midtrans.com/snap/snap.js'
+  }
+  if (url.startsWith('https://app.midtrans.com/')) {
+    return 'https://app.midtrans.com/snap/snap.js'
+  }
+  return midtransSnapScriptSrc
+}
+
 function canStartMidtransPayment() {
   if (!booking.value) return false
   if (!midtransClientKey) return false
@@ -53,10 +64,21 @@ function showSuccessPopup() {
   })
 }
 
-async function loadMidtransSnapScript() {
-  if (window.snap) return
-
+async function loadMidtransSnapScript(scriptSrc = midtransSnapScriptSrc) {
   const existingScript = document.getElementById('midtrans-snap-script')
+  const existingSrc = existingScript?.getAttribute('src') || ''
+
+  if (window.snap && existingScript && existingSrc === scriptSrc) return
+
+  if (existingScript && existingSrc !== scriptSrc) {
+    existingScript.remove()
+    try {
+      delete window.snap
+    } catch (_) {
+      window.snap = undefined
+    }
+  }
+
   if (existingScript) {
     await new Promise((resolve, reject) => {
       existingScript.addEventListener('load', resolve, { once: true })
@@ -68,7 +90,7 @@ async function loadMidtransSnapScript() {
   await new Promise((resolve, reject) => {
     const script = document.createElement('script')
     script.id = 'midtrans-snap-script'
-    script.src = midtransSnapScriptSrc
+    script.src = scriptSrc
     script.setAttribute('data-client-key', midtransClientKey)
     script.onload = resolve
     script.onerror = () => reject(new Error('Gagal memuat Midtrans Snap.'))
@@ -92,14 +114,17 @@ async function bayarDenganMidtrans() {
 
   midtransLoading.value = true
   try {
-    await loadMidtransSnapScript()
-
     const res = await api.post('/pembayaran/midtrans/token', {
       booking_id: booking.value.booking_id,
       return_url: `${window.location.origin}/pembayaran/${booking.value.booking_id}`,
     })
 
     const snapToken = res.data?.snap_token
+    const redirectUrl = res.data?.redirect_url
+    const scriptSrc = resolveSnapScriptSrc(redirectUrl)
+
+    await loadMidtransSnapScript(scriptSrc)
+
     if (!snapToken || !window.snap) {
       throw new Error('Snap token Midtrans tidak tersedia.')
     }
