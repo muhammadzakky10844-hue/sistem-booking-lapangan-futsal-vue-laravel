@@ -5,7 +5,10 @@ nixPkgs = ["php82", "php82Packages.composer", "nodejs-20_x"]
 cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
-cmds = ["npm install --omit=dev"]
+cmds = [
+  "php artisan config:cache",
+  "php artisan route:cache"
+]
 
 [start]
 cmd = "bash start.sh"
