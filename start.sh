@@ -8,6 +8,10 @@ php artisan config:clear || true
 php artisan route:clear || true
 php artisan view:clear || true
 
+# Run migrations
 php artisan migrate --force || true
+
+# Optional: Run seeders (comment out if not needed)
+# php artisan db:seed --force || true
 
 php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
