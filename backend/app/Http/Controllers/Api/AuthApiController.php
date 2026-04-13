@@ -48,7 +48,10 @@ class AuthApiController extends Controller
             return response()->json(['message' => 'Gagal membuat token login. Periksa konfigurasi JWT di server.'], 500);
         } catch (\Throwable $e) {
             Log::error('Auth login error', ['error' => $e->getMessage()]);
-            return response()->json(['message' => 'Terjadi kesalahan server saat login.'], 500);
+            return response()->json([
+                'message' => 'Terjadi kesalahan server saat login.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 
