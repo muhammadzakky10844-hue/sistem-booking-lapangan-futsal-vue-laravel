@@ -7,6 +7,8 @@ use App\Models\Booking;
 use App\Models\Lapangan;
 use App\Models\Pembayaran;
 use Carbon\Carbon;
+use Database\Seeders\BookingSeeder;
+use Database\Seeders\LapanganSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +16,14 @@ class DashboardApiController extends Controller
 {
     public function index(Request $request)
     {
+        if (Lapangan::count() === 0) {
+            (new LapanganSeeder())->run();
+        }
+
+        if (Booking::count() === 0) {
+            (new BookingSeeder())->run();
+        }
+
         $validated = $request->validate([
             'periode' => 'nullable|in:7,14,30',
         ]);

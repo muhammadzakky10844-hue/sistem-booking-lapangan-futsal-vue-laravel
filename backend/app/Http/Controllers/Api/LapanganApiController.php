@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Log, Schema};
 use App\Http\Controllers\Controller;
 use App\Models\{Booking, Lapangan};
+use Database\Seeders\LapanganSeeder;
 use Throwable;
 
 class LapanganApiController extends Controller
@@ -13,6 +14,10 @@ class LapanganApiController extends Controller
     // Public: list lapangan tersedia (untuk halaman home penyewa)
     public function index()
     {
+        if (Lapangan::count() === 0) {
+            (new LapanganSeeder())->run();
+        }
+
         try {
             $lapangans = Lapangan::where('status', 'tersedia')
                 ->orderBy('nomor_lapangan')
