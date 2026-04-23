@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\PembayaransExport;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Pembayaran;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use Midtrans\Config as MidtransConfig;
 use Midtrans\Snap;
 use Midtrans\Transaction;
@@ -344,23 +347,43 @@ class PembayaranApiController extends Controller
             'per_page'      => 'nullable|integer|min:5|max:100',
         ]);
 
-        $query = Pembayaran::with('booking.lapangan')->latest();
-
-        if (!empty($validated['status'])) {
-            $query->where('status_verifikasi', $validated['status']);
-        }
-        if (!empty($validated['search'])) {
-            $query->whereHas('booking', function ($q) use ($validated) {
-                $q->where('nama_penyewa', 'like', '%' . $validated['search'] . '%');
-            });
-        }
-        if (!empty($validated['uploaded_date'])) {
-            $query->whereDate('created_at', $validated['uploaded_date']);
-        }
+        $query = $this->buildAdminQuery($validated);
 
         $perPage = $validated['per_page'] ?? 10;
 
         return response()->json($query->paginate($perPage));
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $validated = $request->validate([
+            'status'        => 'nullable|in:menunggu,diterima,ditolak',
+            'search'        => 'nullable|string|max:100',
+            'uploaded_date' => 'nullable|date',
+        ]);
+
+        $pembayarans = $this->buildAdminQuery($validated)->get();
+        $fileName = 'laporan-pembayaran-' . now()->format('Ymd-His') . '.xlsx';
+
+        return Excel::download(new PembayaransExport($pembayarans), $fileName);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $validated = $request->validate([
+            'status'        => 'nullable|in:menunggu,diterima,ditolak',
+            'search'        => 'nullable|string|max:100',
+            'uploaded_date' => 'nullable|date',
+        ]);
+
+        $pembayarans = $this->buildAdminQuery($validated)->get();
+
+        $pdf = Pdf::loadView('exports.pembayarans', [
+            'pembayarans' => $pembayarans,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('laporan-pembayaran-' . now()->format('Ymd-His') . '.pdf');
     }
 
     public function terima(Request $request)
@@ -589,5 +612,24 @@ class PembayaranApiController extends Controller
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function buildAdminQuery(array $validated)
+    {
+        $query = Pembayaran::with('booking.lapangan')->latest();
+
+        if (!empty($validated['status'])) {
+            $query->where('status_verifikasi', $validated['status']);
+        }
+        if (!empty($validated['search'])) {
+            $query->whereHas('booking', function ($q) use ($validated) {
+                $q->where('nama_penyewa', 'like', '%' . $validated['search'] . '%');
+            });
+        }
+        if (!empty($validated['uploaded_date'])) {
+            $query->whereDate('created_at', $validated['uploaded_date']);
+        }
+
+        return $query;
     }
 }

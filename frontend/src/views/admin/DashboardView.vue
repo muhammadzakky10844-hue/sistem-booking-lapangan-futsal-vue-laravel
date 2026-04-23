@@ -7,6 +7,7 @@ import Chart from 'chart.js/auto'
 const stats   = ref(null)
 const loading = ref(true)
 const chartLoading = ref(false)
+const exporting = ref(false)
 const auth    = useAuthStore()
 const periodePendapatan = ref('7')
 const pendapatanChartRef = ref(null)
@@ -197,6 +198,33 @@ function formatTanggal(t) {
   return new Date(t).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+async function exportDashboardPdf() {
+  if (exporting.value) return
+
+  exporting.value = true
+  try {
+    const res = await api.get('/admin/dashboard/export/pdf', {
+      params: { periode: String(periodePendapatan.value) },
+      responseType: 'blob',
+    })
+
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = `laporan-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch {
+    alert('Gagal mengunduh laporan dashboard.')
+  } finally {
+    exporting.value = false
+  }
+}
+
 const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 </script>
 
@@ -209,12 +237,19 @@ const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-
     <template v-else-if="stats">
       <!-- Welcome Banner -->
       <div class="rounded-3 mb-4 px-4 py-4 text-white" style="background:linear-gradient(135deg,#1a1a2e,#0d6efd);">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
           <div style="font-size:2.5rem;"><i class="bi bi-speedometer2"></i></div>
           <div>
             <h5 class="mb-0 fw-bold">Selamat Datang, {{ auth.admin?.nama }}!</h5>
             <small class="opacity-75">{{ today }} &mdash; Sistem Booking Lapangan Futsal</small>
           </div>
+          <button
+            type="button"
+            class="btn btn-light btn-sm fw-semibold"
+            :disabled="exporting"
+            @click="exportDashboardPdf">
+            <i class="bi bi-download me-1"></i> Export Laporan PDF
+          </button>
         </div>
       </div>
 

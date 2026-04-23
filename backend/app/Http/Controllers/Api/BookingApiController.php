@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Exports\BookingsExport;
 use App\Models\{Booking, Lapangan};
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class BookingApiController extends Controller
 {
@@ -84,22 +87,27 @@ class BookingApiController extends Controller
 
     public function adminIndex(Request $request)
     {
-        $query = Booking::with('lapangan')->latest();
+        return response()->json($this->buildAdminQuery($request)->get());
+    }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('lapangan_id')) {
-            $query->where('lapangan_id', $request->lapangan_id);
-        }
-        if ($request->filled('tanggal')) {
-            $query->whereDate('tanggal_booking', $request->tanggal);
-        }
-        if ($request->filled('search')) {
-            $query->where('nama_penyewa', 'like', '%' . $request->search . '%');
-        }
+    public function exportExcel(Request $request)
+    {
+        $bookings = $this->buildAdminQuery($request)->get();
+        $fileName = 'laporan-booking-' . now()->format('Ymd-His') . '.xlsx';
 
-        return response()->json($query->get());
+        return Excel::download(new BookingsExport($bookings), $fileName);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $bookings = $this->buildAdminQuery($request)->get();
+
+        $pdf = Pdf::loadView('exports.bookings', [
+            'bookings' => $bookings,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('laporan-booking-' . now()->format('Ymd-His') . '.pdf');
     }
 
     public function konfirmasi(Request $request)
@@ -124,5 +132,25 @@ class BookingApiController extends Controller
         $booking = Booking::findOrFail($request->booking_id);
         $booking->update(['status' => 'selesai']);
         return response()->json(['message' => 'Booking ditandai selesai.']);
+    }
+
+    private function buildAdminQuery(Request $request)
+    {
+        $query = Booking::with('lapangan')->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('lapangan_id')) {
+            $query->where('lapangan_id', $request->lapangan_id);
+        }
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal_booking', $request->tanggal);
+        }
+        if ($request->filled('search')) {
+            $query->where('nama_penyewa', 'like', '%' . $request->search . '%');
+        }
+
+        return $query;
     }
 }

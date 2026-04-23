@@ -4,6 +4,7 @@ import api from '@/utils/api'
 
 const pembayarans = ref([])
 const loading     = ref(true)
+const exporting   = ref(false)
 
 const filters = ref({
   search: '',
@@ -137,6 +138,42 @@ function gantiHalaman(page) {
   if (page < 1 || page > pagination.value.last_page || page === pagination.value.current_page) return
   load(page)
 }
+
+async function exportData(format) {
+  if (exporting.value) return
+
+  exporting.value = true
+  try {
+    const params = {
+      search: filters.value.search,
+      uploaded_date: filters.value.uploaded_date,
+    }
+
+    const res = await api.get(`/admin/pembayaran/export/${format}`, {
+      params,
+      responseType: 'blob',
+    })
+
+    const type = format === 'excel'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf'
+    const ext = format === 'excel' ? 'xlsx' : 'pdf'
+    const blob = new Blob([res.data], { type })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = `laporan-pembayaran-${new Date().toISOString().slice(0, 10)}.${ext}`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch {
+    alert('Gagal mengunduh laporan pembayaran.')
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -146,7 +183,23 @@ function gantiHalaman(page) {
         <h5 class="fw-bold mb-0">Monitoring Transaksi Pembayaran</h5>
         <small class="text-muted">Pantau status transaksi Midtrans dan data pembayaran penyewa</small>
       </div>
-      <span class="badge bg-secondary fs-6">{{ pagination.total }} data</span>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-success"
+          :disabled="exporting"
+          @click="exportData('excel')">
+          <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          :disabled="exporting"
+          @click="exportData('pdf')">
+          <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+        </button>
+        <span class="badge bg-secondary fs-6">{{ pagination.total }} data</span>
+      </div>
     </div>
 
     <!-- Filter -->

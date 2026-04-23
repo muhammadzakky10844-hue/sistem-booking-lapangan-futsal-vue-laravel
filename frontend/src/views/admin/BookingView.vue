@@ -1,10 +1,13 @@
 <script setup>
+
+
 import { ref, onMounted } from 'vue'
 import api from '@/utils/api'
 
 const bookings  = ref([])
 const lapangans = ref([])
 const loading   = ref(true)
+const exporting = ref(false)
 const success   = ref('')
 
 const filters = ref({ status: '', lapangan_id: '', tanggal: '', search: '' })
@@ -48,6 +51,37 @@ function statusBadge(s) {
 }
 
 function formatJam(t) { return t ? t.substring(0, 5) : '-' }
+
+async function exportData(format) {
+  if (exporting.value) return
+
+  exporting.value = true
+  try {
+    const res = await api.get(`/admin/booking/export/${format}`, {
+      params: filters.value,
+      responseType: 'blob',
+    })
+
+    const type = format === 'excel'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf'
+    const ext = format === 'excel' ? 'xlsx' : 'pdf'
+    const blob = new Blob([res.data], { type })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = `laporan-booking-${new Date().toISOString().slice(0, 10)}.${ext}`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch {
+    alert('Gagal mengunduh laporan booking.')
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -57,7 +91,23 @@ function formatJam(t) { return t ? t.substring(0, 5) : '-' }
         <h5 class="fw-bold mb-0">Daftar Booking</h5>
         <small class="text-muted">Kelola semua data pemesanan lapangan</small>
       </div>
-      <span class="badge bg-secondary fs-6">{{ bookings.length }} data</span>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-success"
+          :disabled="exporting"
+          @click="exportData('excel')">
+          <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          :disabled="exporting"
+          @click="exportData('pdf')">
+          <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+        </button>
+        <span class="badge bg-secondary fs-6">{{ bookings.length }} data</span>
+      </div>
     </div>
 
     <div v-if="success" class="alert alert-success border-0">{{ success }}</div>

@@ -49,10 +49,17 @@ Route::middleware('admin.jwt')->prefix('admin')->group(function () {
 
     // Booking
     Route::get('/booking',            [BookingApiController::class, 'adminIndex']);
+    Route::get('/booking/export/excel', [BookingApiController::class, 'exportExcel']);
+    Route::get('/booking/export/pdf', [BookingApiController::class, 'exportPdf']);
     Route::post('/booking/konfirmasi',[BookingApiController::class, 'konfirmasi']);
     Route::post('/booking/batal',     [BookingApiController::class, 'batal']);
     Route::post('/booking/selesai',   [BookingApiController::class, 'selesai']);
 
     // Pembayaran
     Route::get('/pembayaran',         [PembayaranApiController::class, 'index']);
+    Route::get('/pembayaran/export/excel', [PembayaranApiController::class, 'exportExcel']);
+    Route::get('/pembayaran/export/pdf', [PembayaranApiController::class, 'exportPdf']);
+
+    // Dashboard
+    Route::get('/dashboard/export/pdf', [DashboardApiController::class, 'exportPdf']);
 });

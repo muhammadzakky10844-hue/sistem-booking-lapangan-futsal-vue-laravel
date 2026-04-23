@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Lapangan;
 use App\Models\Pembayaran;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,29 @@ class DashboardApiController extends Controller
         ]);
 
         $periodDays = (int) ($validated['periode'] ?? 7);
+
+        return response()->json($this->buildDashboardPayload($periodDays));
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $validated = $request->validate([
+            'periode' => 'nullable|in:7,14,30',
+        ]);
+
+        $periodDays = (int) ($validated['periode'] ?? 7);
+        $stats = $this->buildDashboardPayload($periodDays);
+
+        $pdf = Pdf::loadView('exports.dashboard_summary', [
+            'stats' => $stats,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('laporan-dashboard-' . now()->format('Ymd-His') . '.pdf');
+    }
+
+    private function buildDashboardPayload(int $periodDays): array
+    {
 
         $bookingStats = [
             'total' => Booking::count(),
@@ -65,7 +89,7 @@ class DashboardApiController extends Controller
             $revenueValues[] = (int) ($dailyRevenueRaw[$dateKey] ?? 0);
         }
 
-        return response()->json([
+        return [
             'lapangan' => [
                 'total'     => Lapangan::count(),
                 'tersedia'  => Lapangan::where('status', 'tersedia')->count(),
@@ -99,6 +123,6 @@ class DashboardApiController extends Controller
                 ],
             ],
             'booking_terbaru'  => Booking::with('lapangan')->latest()->take(5)->get(),
-        ]);
+        ];
     }
 }
