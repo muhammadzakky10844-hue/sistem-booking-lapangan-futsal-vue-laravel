@@ -75,13 +75,14 @@ function normalizeStatus(s) {
 }
 
 function statusTransaksi(p) {
+  const statusVerifikasi = normalizeStatus(p.status_verifikasi)
+  if (statusVerifikasi === 'diterima') return 'berhasil'
+  if (statusVerifikasi === 'ditolak') return 'gagal'
+
   if (normalizeStatus(p.payment_gateway) === 'midtrans') {
     return normalizeStatus(p.gateway_transaction_status) || 'pending'
   }
 
-  const statusVerifikasi = normalizeStatus(p.status_verifikasi)
-  if (statusVerifikasi === 'diterima') return 'berhasil'
-  if (statusVerifikasi === 'ditolak') return 'gagal'
   return 'pending'
 }
 
